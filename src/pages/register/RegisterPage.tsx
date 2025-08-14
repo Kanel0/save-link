@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import  Link  from 'next/link';
 import Logo from '../../../public/logo.png';
 import Input from '@/components/input/Input';
 import Image from 'next/image';
@@ -213,7 +213,7 @@ useEffect(() => {
           <div>
             <p className='text-center text-gray-500 text-sm'>
               Already have an account? {' '}
-              <Link to='/login' className='text-[#7367f0] hover:underline'>
+              <Link href='/login' className='text-[#7367f0] hover:underline'>
                 Sign In
               </Link>
             </p>

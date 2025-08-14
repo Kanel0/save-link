@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import  Link  from 'next/link';
 import Logo from '../../../public/logo.png';
 import Image from 'next/image';
 import { ButtonPrimary } from '@/components/button/Button';
@@ -100,7 +100,7 @@ function LoginPage() {
           <div className='mb-6'>
             <div className='flex flex-wrap justify-between mb-1'>
               <p className='text-gray-500'>Password</p>
-              <Link to="/forgot-password" className='text-[#7367f0] text-sm hover:underline'>
+              <Link href="/forgot-password" className='text-[#7367f0] text-sm hover:underline'>
                 Forgot password?
               </Link> 
             </div>
@@ -144,7 +144,7 @@ function LoginPage() {
           <div>
             <p className='text-center text-gray-500 text-sm'>
               New to our platform? {' '}
-              <Link to='/register' className='text-[#7367f0] hover:underline'>
+              <Link href='/register' className='text-[#7367f0] hover:underline'>
                 Sign Up
               </Link>
             </p>
