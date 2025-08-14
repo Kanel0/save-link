@@ -1,19 +1,20 @@
 "use client";
 import React, { useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Logo from '../../../public/logo.png';
 import Image from 'next/image';
 import { ButtonPrimary } from '@/components/button/Button';
 import Modal from '@/components/modals/Modal';
 import Input from '@/components/input/Input';
+import { useRouter } from 'next/router';
 
 
 function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   // États pour gérer les modals
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -51,7 +52,7 @@ function LoginPage() {
         // Enregistrer le token JWT dans le localStorage
         localStorage.setItem('tokenadmin', data.token);
         // Rediriger l'utilisateur vers le dashboard
-        navigate('/dashboard');
+        router.push( '/dashboard');
       } else if (response.status === 401) { 
         setModalMessage('Unauthorized: Invalid email or password'); // Message spécifique pour 401
       } else {
@@ -79,7 +80,7 @@ function LoginPage() {
       <div className='flex justify-center bg-gray-100 min-h-screen w-full items-center px-4 py-8'>
         <div className='bg-white p-4 sm:p-8 rounded-lg shadow-2xl w-full max-w-md mx-auto'>
           {/* Logo */}
-          <div onClick={()=> navigate('/')} className='flex cursor-pointer justify-center mb-6 bg-gray-800 rounded shadow-xl'>
+          <div onClick={()=> router.push('/')} className='flex cursor-pointer justify-center mb-6 bg-gray-800 rounded shadow-xl'>
             <Image src={Logo} alt="Loto ERP" className='max-w-[200px] w-full' />
           </div>
           <form onSubmit={handleLogin}>
