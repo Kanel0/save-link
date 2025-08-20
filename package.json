@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 8520",
+    "dev": "next dev  -p 8520",
     "build": "next build",
     "start": "next start -p 8520",
     "lint": "next lint"
@@ -12,13 +12,13 @@
     "@headlessui/react": "^2.2.7",
     "@heroicons/react": "^2.2.0",
     "bcryptjs": "^3.0.2",
+    "framer-motion": "^12.23.12",
     "jsonwebtoken": "^9.0.2",
-    "next": "15.4.5",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "next": "^15.4.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
-    "react-loading-indicators": "^1.0.1",
-    "react-router-dom": "^7.8.0"
+    "react-loading-indicators": "^1.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

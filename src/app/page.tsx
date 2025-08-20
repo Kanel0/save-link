@@ -1,7 +1,7 @@
 "use client";
 
-import RouteContent from "@/routes/Routes";
+import HomePage from "@/pages/home/HomePage";
 
-export default function App({}) {
-  return <RouteContent />;
+export default function Page() {
+  return <HomePage />;
 }

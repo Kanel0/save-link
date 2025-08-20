@@ -1,11 +1,11 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
-import Head from "next/head"; // Import Next.js Head component
 import "./globals.css";
 import Loading from "@/components/loading/Loading";
 
-// Load Google Fonts
+// Fonts Google
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -18,46 +18,50 @@ const geistMono = Geist_Mono({
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate loading delay
+  // Simule un délai de chargement
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 5000);
-    return () => clearTimeout(timer); // Cleanup on unmount
+    const timer = setTimeout(() => setIsLoading(false), 3000);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Update document title dynamically during loading
+  // Met à jour le titre de la page pendant le chargement
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     let dots = "";
     const updateTitle = () => {
-      if (document.readyState !== "complete") {
+      if (isLoading) {
         dots = dots.length < 3 ? dots + "." : "";
         document.title = `Chargement en cours${dots}`;
       } else {
-        document.title = "Hello";
+        document.title = "SaveLink";
         clearInterval(titleInterval);
       }
     };
 
     const titleInterval = setInterval(updateTitle, 500);
-    return () => clearInterval(titleInterval); // Cleanup on unmount
-  }, []);
+    return () => clearInterval(titleInterval);
+  }, [isLoading]);
 
   return (
-    <html lang="en">
-      <Head>
+    <html lang="fr">
+      <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Chargement en cours</title>
-      </Head>
+        <title>SaveLink</title>
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {isLoading ? <Loading /> : children}
-      </body>
+  suppressHydrationWarning
+  className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+>
+  {isLoading ? <Loading /> : children}
+</body>
+
     </html>
   );
 }
