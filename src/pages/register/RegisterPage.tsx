@@ -3,9 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Link from "next/link";
-import Logo from "../../../public/logo.png";
 import Input from "@/components/input/Input";
-import Image from "next/image";
 import Modal from "@/components/modals/Modal";
 import Checkbox, { ButtonPrimary } from "@/components/button/Button";
 import { API } from "@/const/Constant";
