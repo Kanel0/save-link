@@ -1,5 +1,5 @@
 "use client";
-import ConfirmPasswordPage from "@/pages/confirmPassword/ConfirmPassword";
-export default function ConfirmPassword() {
- return < ConfirmPasswordPage/>;
+import DashboardPage from "@/pages/dashboard/DashboardPage";
+export default function Dashboard() {
+ return < DashboardPage/>;
 }
