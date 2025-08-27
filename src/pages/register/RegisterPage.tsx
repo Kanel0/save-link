@@ -100,7 +100,9 @@ const handleSubmit = async (e: React.FormEvent) => {
     // ✅ Création utilisateur avec Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-
+    setModalMessage("Compte créé avec succès !");
+    setIsSuccessModalOpen(true);
+    setIsLoading(false);   
     // ✅ Ajouter username dans le profil Firebase
     await updateProfile(user, { displayName: userName });
 
@@ -112,11 +114,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       createdAt: new Date().toISOString(),
     });
 
-    setModalMessage("Compte créé avec succès !");
-    console.log("Inscription réussie, ouverture du modal");
-    setIsSuccessModalOpen(true);
-    setIsLoading(false);
-   
+    
 
  } catch (error: any) {
   console.error("Firebase error:", error);

@@ -45,8 +45,6 @@ function LoginPage() {
       localStorage.setItem("tokenadmin", token);
 
       setIsLoading(false);
-      setModalMessage("Login successful 🎉");
-      setIsSuccessModalOpen(true);
 
       // Redirection
       router.push("/dashboard");
