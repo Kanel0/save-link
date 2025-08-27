@@ -8,6 +8,11 @@ import Modal from "@/components/modals/Modal";
 import Checkbox, { ButtonPrimary } from "@/components/button/Button";
 import { useRouter } from "next/navigation";
 
+// firebase importation
+import { auth, db } from "@/lib/firebase";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+
 function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -18,6 +23,15 @@ function RegisterPage() {
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+
+    // États pour gérer les modals
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+
+
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -57,10 +71,11 @@ function RegisterPage() {
 
   const router = useRouter();
 
-  // Add the data to the database
-  const handleSubmit = async (e: React.FormEvent) => {
+// Add the data to the database
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
-   setIsLoading(true);
+  setIsLoading(true);
+
   if (!termsAccepted) {
     setModalMessage("Vous devez accepter les conditions d'utilisation !");
     setIsErrorModalOpen(true);
@@ -82,37 +97,49 @@ function RegisterPage() {
   }
 
   try {
-    const response = await fetch(`/api/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: userName, email, password }),
+    // ✅ Création utilisateur avec Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // ✅ Ajouter username dans le profil Firebase
+    await updateProfile(user, { displayName: userName });
+
+    // ✅ Enregistrer dans Firestore
+    await setDoc(doc(db, "users", user.uid), {
+      id: user.uid,
+      username: userName,
+      email,
+      createdAt: new Date().toISOString(),
     });
 
-    const data = await response.json();  // ✅ déjà un objet
-
-    if (response.ok) {
-      setModalMessage("Compte créé avec succès !");
-      setIsSuccessModalOpen(true);
-      setIsLoading(false);
-      router.push("/login");
-    } else {
-      setModalMessage(data.message || "Une erreur est survenue !");
-      setIsErrorModalOpen(true);
-      setIsLoading(false);
-    }
-  } catch (error) {
-    console.error("Erreur JSON :", error);
-    setModalMessage("Erreur lors de la connexion au serveur !");
-    setIsErrorModalOpen(true);
+    setModalMessage("Compte créé avec succès !");
+    console.log("Inscription réussie, ouverture du modal");
+    setIsSuccessModalOpen(true);
     setIsLoading(false);
+   
+
+ } catch (error: any) {
+  console.error("Firebase error:", error);
+  let message = "Erreur lors de la création du compte.";
+  
+  if (error.code === "auth/email-already-in-use") {
+    message = "Cet email est déjà utilisé.";
+  } else if (error.code === "auth/weak-password") {
+    message = "Mot de passe trop faible.";
+  } else if (error.code === "permission-denied") {
+    message = "Erreur de permission. Contactez l'administrateur.";
+  } else {
+    // Log plus détaillé pour les autres erreurs
+    console.error("Erreur Firestore détaillée:", error);
+    message = `Erreur technique: ${error.message || "Veuillez réessayer"}`;
   }
-};
 
+  setModalMessage(message);
+  setIsErrorModalOpen(true);
+  setIsLoading(false);
+}
+}
 
-  // États pour gérer les modals
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
 
   useEffect(() => {
     if (!isSuccessModalOpen) {
@@ -128,11 +155,15 @@ function RegisterPage() {
       {/* ✅ MODAL SUCCESS */}
       <Modal
         isOpen={isSuccessModalOpen}
-        onClose={() => setIsSuccessModalOpen(false)}
+        onClose={() => {
+          setIsSuccessModalOpen(false);
+          router.push("/login"); 
+        }}
         title="Succès"
       >
         <p className="text-gray-800">{modalMessage}</p>
       </Modal>
+
 
       {/* ❌ MODAL ERROR */}
       <Modal
@@ -160,7 +191,7 @@ function RegisterPage() {
           </div>
 
           {/* Username Input */}
-          <div className="mb-2">
+          {/* <div className="mb-2">
             <p className="text-gray-500 mb-1">Name or Username</p>
             <Input
               type="text"
@@ -170,7 +201,7 @@ function RegisterPage() {
               required
             />
           </div>
-
+ */}
           {/* Email Input */}
           <div className="mb-2">
             <p className="text-gray-500 mb-1">Email</p>
@@ -260,7 +291,7 @@ function RegisterPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Loading...
+                  Loading
                 </div>
                  ) : "Create an Account"}
             </ButtonPrimary>
