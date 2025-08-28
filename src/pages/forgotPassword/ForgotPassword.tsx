@@ -26,12 +26,12 @@ function ForgotPasswordPage() {
   const [modalMessage, setModalMessage] = useState('');
 
   // Validation email
-  const validateEmail = (email : any) => {
+  const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  const handleSubmit = async (e : any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -51,19 +51,25 @@ function ForgotPasswordPage() {
     }
 
     try {
+      // Configuration pour l'email de réinitialisation
+      const actionCodeSettings = {
+        // URL de redirection après clic sur le lien
+        url: `${window.location.origin}/confirm-password`,
+        handleCodeInApp: false, // Le lien s'ouvrira dans le navigateur, pas dans l'app
+      };
+
       // Envoyer l'email de réinitialisation
-      await sendPasswordResetEmail(auth, email, {
-        // Configuration optionnelle pour personnaliser l'email
-        url: `${window.location.origin}/login`, // URL de redirection après reset
-        handleCodeInApp: false
-      });
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
 
-      setModalMessage('Un email de réinitialisation a été envoyé à votre adresse email. Vérifiez votre boîte de réception (et vos spams).');
+      setModalMessage(
+        `Un email de réinitialisation a été envoyé à ${email}. ` +
+        'Vérifiez votre boîte de réception et vos spams. ' +
+        'Le lien sera valide pendant 1 heure.'
+      );
       setIsSuccessModalOpen(true);
-      setEmail(''); // Clear le champ email
-      setIsLoading(false);
+      setEmail(''); 
 
-    } catch (error : any) {
+    } catch (error: any) {
       console.error('Erreur lors de l\'envoi de l\'email de réinitialisation:', error);
       
       let message = 'Erreur lors de l\'envoi de l\'email de réinitialisation.';
@@ -81,12 +87,16 @@ function ForgotPasswordPage() {
         case 'auth/network-request-failed':
           message = 'Erreur de connexion. Vérifiez votre connexion internet.';
           break;
+        case 'auth/quota-exceeded':
+          message = 'Quota d\'emails dépassé. Veuillez réessayer plus tard.';
+          break;
         default:
           message = `Erreur: ${error.message}`;
       }
 
       setModalMessage(message);
       setIsErrorModalOpen(true);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -98,18 +108,37 @@ function ForgotPasswordPage() {
         isOpen={isSuccessModalOpen}
         onClose={() => {
           setIsSuccessModalOpen(false);
-          router.push('/login'); // Redirection vers login après succès
+          // Ne pas rediriger automatiquement, laisser l'utilisateur choisir
         }}
-        title="Email envoyé"
+        title="Email envoyé ✅"
       >
-        <p className="text-gray-800">{modalMessage}</p>
+        <div className="text-gray-800">
+          <p className="mb-4">{modalMessage}</p>
+          <div className="flex gap-2">
+            <ButtonPrimary
+              onClick={() => {
+                setIsSuccessModalOpen(false);
+                router.push('/login');
+              }}
+              className="flex-1 py-2 text-sm"
+            >
+              Retour à la connexion
+            </ButtonPrimary>
+            <ButtonPrimary
+              onClick={() => setIsSuccessModalOpen(false)}
+              className="flex-1 py-2 text-sm bg-gray-600 hover:bg-gray-700"
+            >
+              Fermer
+            </ButtonPrimary>
+          </div>
+        </div>
       </Modal>
 
       {/* ❌ MODAL ERROR */}
       <Modal
         isOpen={isErrorModalOpen}
         onClose={() => setIsErrorModalOpen(false)}
-        title="Erreur"
+        title="Erreur ❌"
       >
         <p className="text-gray-800">{modalMessage}</p>
       </Modal>
@@ -136,14 +165,14 @@ function ForgotPasswordPage() {
               variant="secondary" 
               className="flex items-center text-center sm:text-left"
             >
-              Forgot your password?
+              Mot de passe oublié ?
               <FcLock className="ml-2 text-2xl sm:text-3xl" />
             </Title>
           </div>
 
           {/* Description */}
           <div className="text-gray-500 text-sm sm:text-base mb-6 sm:text-left">
-            Enter your email, and we will send you instructions to reset your password.
+            Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
           </div>
 
           {/* Email Field */}
@@ -151,7 +180,7 @@ function ForgotPasswordPage() {
             <p className="text-gray-500 mb-2 text-sm sm:text-base">Email</p>
             <Input
               type="email"
-              placeholder="Enter your email"
+              placeholder="Entrez votre adresse email"
               className="w-full"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -164,7 +193,7 @@ function ForgotPasswordPage() {
             <ButtonPrimary 
               type="submit" 
               className="w-full py-2.5 text-sm sm:text-base"
-              disabled={isLoading}
+              disabled={isLoading || !email}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -172,10 +201,10 @@ function ForgotPasswordPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Sending...
+                  Send
                 </div>
               ) : (
-                'Send Reset Link'
+                'Envoyer le lien de réinitialisation'
               )}
             </ButtonPrimary>
           </div>
@@ -186,8 +215,15 @@ function ForgotPasswordPage() {
               className="text-[#7367f0] text-sm sm:text-base hover:underline no-underline flex items-center transition-colors duration-200 hover:text-[#5e52e6]"
             >
               <IoIosArrowBack className="mr-2 text-xl sm:text-2xl" />
-              Back to Login
+              Back to login
             </Link>
+          </div>
+
+          {/* Info supplémentaire */}
+          <div className="mt-6 p-3 bg-blue-900/20 rounded-lg border border-blue-700/30">
+            <p className="text-blue-300 text-xs sm:text-sm text-center">
+              💡 Astuce : Vérifiez aussi votre dossier spam si vous ne recevez pas l'email dans les 5 minutes.
+            </p>
           </div>
         </form>
       </div>
