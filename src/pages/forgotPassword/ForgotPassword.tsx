@@ -20,12 +20,12 @@ function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // États pour les modals
+  // Modals state
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
 
-  // Validation email
+  // Email validation
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -35,63 +35,63 @@ function ForgotPasswordPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validation côté client
+    // Client-side validation
     if (!email) {
-      setModalMessage('Veuillez entrer votre adresse email.');
+      setModalMessage('Please enter your email address.');
       setIsErrorModalOpen(true);
       setIsLoading(false);
       return;
     }
 
     if (!validateEmail(email)) {
-      setModalMessage('Veuillez entrer une adresse email valide.');
+      setModalMessage('Please enter a valid email address.');
       setIsErrorModalOpen(true);
       setIsLoading(false);
       return;
     }
 
     try {
-      // Configuration pour l'email de réinitialisation
+      // Settings for reset email
       const actionCodeSettings = {
-        // URL de redirection après clic sur le lien
-        url: `${window.location.origin}/confirm-password`,
-        handleCodeInApp: false, // Le lien s'ouvrira dans le navigateur, pas dans l'app
+        // Redirect URL after clicking the link
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: false, // The link will open in browser, not in the app
       };
 
-      // Envoyer l'email de réinitialisation
+      // Send password reset email
       await sendPasswordResetEmail(auth, email, actionCodeSettings);
 
       setModalMessage(
-        `Un email de réinitialisation a été envoyé à ${email}. ` +
-        'Vérifiez votre boîte de réception et vos spams. ' +
-        'Le lien sera valide pendant 1 heure.'
+        `A reset email has been sent to ${email}. ` +
+        'Check your inbox and spam folder. ' +
+        'The link will be valid for 1 hour.'
       );
       setIsSuccessModalOpen(true);
       setEmail(''); 
 
     } catch (error: any) {
-      console.error('Erreur lors de l\'envoi de l\'email de réinitialisation:', error);
+      console.error('Error sending password reset email:', error);
       
-      let message = 'Erreur lors de l\'envoi de l\'email de réinitialisation.';
+      let message = 'Error sending password reset email.';
       
       switch (error.code) {
         case 'auth/user-not-found':
-          message = 'Aucun compte trouvé avec cette adresse email.';
+          message = 'No account found with this email address.';
           break;
         case 'auth/invalid-email':
-          message = 'Adresse email invalide.';
+          message = 'Invalid email address.';
           break;
         case 'auth/too-many-requests':
-          message = 'Trop de tentatives. Veuillez réessayer plus tard.';
+          message = 'Too many attempts. Please try again later.';
           break;
         case 'auth/network-request-failed':
-          message = 'Erreur de connexion. Vérifiez votre connexion internet.';
+          message = 'Connection error. Check your internet connection.';
           break;
         case 'auth/quota-exceeded':
-          message = 'Quota d\'emails dépassé. Veuillez réessayer plus tard.';
+          message = 'Email quota exceeded. Please try again later.';
           break;
         default:
-          message = `Erreur: ${error.message}`;
+          message = `Error: ${error.message}`;
       }
 
       setModalMessage(message);
@@ -103,14 +103,14 @@ function ForgotPasswordPage() {
 
   return (
     <>
-      {/* ✅ MODAL SUCCESS */}
+      {/* ✅ SUCCESS MODAL */}
       <Modal
         isOpen={isSuccessModalOpen}
         onClose={() => {
           setIsSuccessModalOpen(false);
-          // Ne pas rediriger automatiquement, laisser l'utilisateur choisir
+          // Do not redirect automatically, let the user choose
         }}
-        title="Email envoyé ✅"
+        title="Email Sent ✅"
       >
         <div className="text-gray-800">
           <p className="mb-4">{modalMessage}</p>
@@ -122,23 +122,23 @@ function ForgotPasswordPage() {
               }}
               className="flex-1 py-2 text-sm"
             >
-              Retour à la connexion
+              Back to login
             </ButtonPrimary>
             <ButtonPrimary
               onClick={() => setIsSuccessModalOpen(false)}
               className="flex-1 py-2 text-sm bg-gray-600 hover:bg-gray-700"
             >
-              Fermer
+              Close
             </ButtonPrimary>
           </div>
         </div>
       </Modal>
 
-      {/* ❌ MODAL ERROR */}
+      {/* ❌ ERROR MODAL */}
       <Modal
         isOpen={isErrorModalOpen}
         onClose={() => setIsErrorModalOpen(false)}
-        title="Erreur ❌"
+        title="Error ❌"
       >
         <p className="text-gray-800">{modalMessage}</p>
       </Modal>
@@ -165,14 +165,14 @@ function ForgotPasswordPage() {
               variant="secondary" 
               className="flex items-center text-center sm:text-left"
             >
-              Mot de passe oublié ?
+              Forgot Password?
               <FcLock className="ml-2 text-2xl sm:text-3xl" />
             </Title>
           </div>
 
           {/* Description */}
           <div className="text-gray-500 text-sm sm:text-base mb-6 sm:text-left">
-            Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+            Enter your email address and we will send you a link to reset your password.
           </div>
 
           {/* Email Field */}
@@ -180,7 +180,7 @@ function ForgotPasswordPage() {
             <p className="text-gray-500 mb-2 text-sm sm:text-base">Email</p>
             <Input
               type="email"
-              placeholder="Entrez votre adresse email"
+              placeholder="Enter your email address"
               className="w-full"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -204,7 +204,7 @@ function ForgotPasswordPage() {
                   Send
                 </div>
               ) : (
-                'Envoyer le lien de réinitialisation'
+                'Send Reset Link'
               )}
             </ButtonPrimary>
           </div>
@@ -219,10 +219,10 @@ function ForgotPasswordPage() {
             </Link>
           </div>
 
-          {/* Info supplémentaire */}
+          {/* Additional Info */}
           <div className="mt-6 p-3 bg-blue-900/20 rounded-lg border border-blue-700/30">
             <p className="text-blue-300 text-xs sm:text-sm text-center">
-              💡 Astuce : Vérifiez aussi votre dossier spam si vous ne recevez pas l'email dans les 5 minutes.
+              💡 Tip: Also check your spam folder if you do not receive the email within 5 minutes.
             </p>
           </div>
         </form>

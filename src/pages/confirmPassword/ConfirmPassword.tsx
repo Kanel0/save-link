@@ -14,7 +14,7 @@ function ConfirmPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Récupérer oobCode depuis l'URL
+  // Get oobCode from URL
   const oobCode = searchParams?.get("oobCode");
 
   const [showPassword, setShowPassword] = useState(false);
@@ -28,39 +28,39 @@ function ConfirmPasswordPage() {
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
-  // Vérifier la validité du code au chargement
+  // Verify code on mount
   useEffect(() => {
     const verifyCode = async () => {
       if (!oobCode) {
-        setError("Lien de réinitialisation invalide ou manquant.");
+        setError("Invalid or missing reset link.");
         setCodeValid(false);
         return;
       }
 
       try {
-        // Vérifier le code et récupérer l'email
+        // Verify code and get user email
         const userEmail = await verifyPasswordResetCode(auth, oobCode);
         setEmail(userEmail);
         setCodeValid(true);
       } catch (err: any) {
-        console.error("Erreur de vérification du code:", err);
-        let errorMessage = "Lien de réinitialisation invalide ou expiré.";
+        console.error("Code verification error:", err);
+        let errorMessage = "Invalid or expired reset link.";
         
         switch (err.code) {
           case 'auth/expired-action-code':
-            errorMessage = "Ce lien de réinitialisation a expiré. Veuillez demander un nouveau lien.";
+            errorMessage = "This reset link has expired. Please request a new one.";
             break;
           case 'auth/invalid-action-code':
-            errorMessage = "Ce lien de réinitialisation est invalide.";
+            errorMessage = "This reset link is invalid.";
             break;
           case 'auth/user-disabled':
-            errorMessage = "Ce compte utilisateur a été désactivé.";
+            errorMessage = "This user account has been disabled.";
             break;
           case 'auth/user-not-found':
-            errorMessage = "Aucun utilisateur trouvé pour cette demande de réinitialisation.";
+            errorMessage = "No user found for this reset request.";
             break;
           default:
-            errorMessage = `Erreur: ${err.message}`;
+            errorMessage = `Error: ${err.message}`;
         }
         
         setError(errorMessage);
@@ -73,22 +73,20 @@ function ConfirmPasswordPage() {
 
   const validatePassword = (password: string) => {
     if (password.length < 6) {
-      return "Le mot de passe doit contenir au moins 6 caractères.";
+      return "Password must be at least 6 characters.";
     }
     return null;
   };
 
   const handleResetPassword = async () => {
-    // Réinitialiser les messages
     setError("");
     setSuccess("");
 
     if (!oobCode) {
-      setError("Lien de réinitialisation invalide ou expiré.");
+      setError("Invalid or expired reset link.");
       return;
     }
 
-    // Validation du mot de passe
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);
@@ -96,43 +94,42 @@ function ConfirmPasswordPage() {
     }
 
     if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError("Passwords do not match.");
       return;
     }
 
     try {
       setLoading(true);
       await confirmPasswordReset(auth, oobCode, password);
-      setSuccess("Mot de passe réinitialisé avec succès ! Redirection vers la page de connexion...");
+      setSuccess("Password successfully reset! Redirecting to login...");
       
-      // Redirection après succès
       setTimeout(() => {
         router.push("/login");
       }, 3000);
       
     } catch (err: any) {
-      console.error("Erreur lors de la réinitialisation:", err);
+      console.error("Reset error:", err);
       
-      let errorMessage = "Erreur lors de la réinitialisation du mot de passe.";
+      let errorMessage = "Error resetting password.";
       
       switch (err.code) {
         case 'auth/expired-action-code':
-          errorMessage = "Ce lien de réinitialisation a expiré. Veuillez demander un nouveau lien.";
+          errorMessage = "This reset link has expired. Please request a new one.";
           break;
         case 'auth/invalid-action-code':
-          errorMessage = "Ce lien de réinitialisation est invalide.";
+          errorMessage = "This reset link is invalid.";
           break;
         case 'auth/user-disabled':
-          errorMessage = "Ce compte utilisateur a été désactivé.";
+          errorMessage = "This user account has been disabled.";
           break;
         case 'auth/user-not-found':
-          errorMessage = "Aucun utilisateur trouvé.";
+          errorMessage = "No user found.";
           break;
         case 'auth/weak-password':
-          errorMessage = "Le mot de passe est trop faible.";
+          errorMessage = "Password is too weak.";
           break;
         default:
-          errorMessage = `Erreur: ${err.message}`;
+          errorMessage = `Error: ${err.message}`;
       }
       
       setError(errorMessage);
@@ -141,21 +138,21 @@ function ConfirmPasswordPage() {
     }
   };
 
-  // Affichage de chargement pendant la vérification du code
+  // Loading while verifying code
   if (codeValid === null) {
     return (
       <div className="flex justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen w-full items-center px-4 py-6 sm:py-8">
         <div className="group bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-xl p-4 sm:p-8 rounded-lg shadow-2xl w-full max-w-md mx-auto">
           <div className="flex justify-center items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400"></div>
-            <span className="ml-4 text-white">Vérification du lien...</span>
+            <span className="ml-4 text-white">Verifying link...</span>
           </div>
         </div>
       </div>
     );
   }
 
-  // Si le code n'est pas valide, afficher une erreur avec option de retour
+  // Invalid code
   if (codeValid === false) {
     return (
       <div className="flex justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen w-full items-center px-4 py-6 sm:py-8">
@@ -174,7 +171,7 @@ function ConfirmPasswordPage() {
           <div className="text-center">
             <div className="text-red-500 text-6xl mb-4">⚠️</div>
             <Title type="h3" variant="secondary" className="mb-4">
-              Lien invalide
+              Invalid Link
             </Title>
             <p className="text-red-500 text-sm mb-6">{error}</p>
             
@@ -182,14 +179,14 @@ function ConfirmPasswordPage() {
               className="w-full py-2.5 text-sm mb-4"
               onClick={() => router.push("/forgot-password")}
             >
-              Demander un nouveau lien
+              Request a new link
             </ButtonPrimary>
             
             <ButtonPrimary
               className="w-full py-2.5 text-sm bg-gray-600 hover:bg-gray-700"
               onClick={() => router.push("/login")}
             >
-              Retour à la connexion
+              Back to login
             </ButtonPrimary>
           </div>
         </div>
@@ -214,7 +211,7 @@ function ConfirmPasswordPage() {
         {/* Title */}
         <div className="flex justify-center mb-2">
           <Title type="h3" variant="secondary" className="flex items-center">
-            Réinitialiser le mot de passe
+            Reset Password
             <FcLock className="ml-2 text-2xl" />
           </Title>
         </div>
@@ -223,19 +220,19 @@ function ConfirmPasswordPage() {
         {email && (
           <div className="mb-6 p-3 bg-blue-900/30 rounded-lg border border-blue-700/50">
             <p className="text-blue-300 text-sm">
-              <span className="font-medium">Email :</span> {email}
+              <span className="font-medium">Email:</span> {email}
             </p>
           </div>
         )}
 
         {/* New Password */}
         <div className="mb-6">
-          <p className="text-gray-500 mb-2 text-sm">Nouveau mot de passe</p>
+          <p className="text-gray-500 mb-2 text-sm">New Password</p>
           <Input
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimum 6 caractères"
+            placeholder="Minimum 6 characters"
             icon={
               showPassword ? (
                 <FaEye onClick={togglePasswordVisibility} className="cursor-pointer text-gray-500 text-xl" />
@@ -248,12 +245,12 @@ function ConfirmPasswordPage() {
 
         {/* Confirm Password */}
         <div className="mb-6">
-          <p className="text-gray-500 mb-2 text-sm">Confirmer le mot de passe</p>
+          <p className="text-gray-500 mb-2 text-sm">Confirm Password</p>
           <Input
             type={showPassword ? "text" : "password"}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirmer le mot de passe"
+            placeholder="Confirm password"
             icon={
               showPassword ? (
                 <FaEye onClick={togglePasswordVisibility} className="cursor-pointer text-gray-500 text-xl" />
@@ -290,10 +287,10 @@ function ConfirmPasswordPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Réinitialisation...
+                Resetting...
               </div>
             ) : (
-              'Confirmer le nouveau mot de passe'
+              'Confirm New Password'
             )}
           </ButtonPrimary>
         </div>
@@ -304,7 +301,7 @@ function ConfirmPasswordPage() {
             onClick={() => router.push("/login")}
             className="text-[#7367f0] text-sm hover:underline transition-colors duration-200 hover:text-[#5e52e6]"
           >
-            Retour à la connexion
+            Back to login
           </button>
         </div>
 
