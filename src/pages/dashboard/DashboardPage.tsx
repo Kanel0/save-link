@@ -52,34 +52,36 @@ function DashboardPage() {
 
   // Écouter les liens de l'utilisateur en temps réel
   useEffect(() => {
-    if (!user) return;
+  if (!user) return;
 
-    const linksQuery = query(
-      collection(db, 'links'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
+  const linksQuery = query(
+    collection(db, 'links'),
+    where('userId', '==', user.uid),
+    orderBy('createdAt', 'desc')
+  );
 
-    const unsubscribe = onSnapshot(linksQuery, (snapshot) => {
-      const userLinks: LinkItem[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        userLinks.push({
-          id: doc.id,
-          url: data.url,
-          title: data.title,
-          description: data.description,
-          tags: data.tags || [],
-          createdAt: data.createdAt?.toDate() || new Date(),
-          userId: data.userId,
-          favicon: data.favicon || '🔗'
-        });
+  const unsubscribe = onSnapshot(linksQuery, (snapshot) => {
+    console.log('Snapshot docs:', snapshot.docs.map(d => d.data())); // <- <--- ajoute ça
+    const userLinks: LinkItem[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      userLinks.push({
+        id: doc.id,
+        url: data.url,
+        title: data.title,
+        description: data.description,
+        tags: data.tags || [],
+        createdAt: data.createdAt?.toDate() || new Date(),
+        userId: data.userId,
+        favicon: data.favicon || '🔗'
       });
-      setLinks(userLinks);
     });
+    setLinks(userLinks);
+  });
 
-    return () => unsubscribe();
-  }, [user]);
+  return () => unsubscribe();
+}, [user]);
+
 
   // Fonction de déconnexion
   const handleLogout = async () => {
