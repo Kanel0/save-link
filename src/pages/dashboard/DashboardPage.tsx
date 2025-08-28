@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Link2 as LinkIcon, Calendar, Tag, ExternalLink, Trash2, Edit3, Sparkles } from 'lucide-react';
+import { Search, Plus, Link2 as LinkIcon, Calendar, Tag, ExternalLink, Trash2, Edit3, Sparkles, LogOut, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { auth, db } from '@/lib/firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { signOut } from 'firebase/auth';
+import { 
+  collection, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  updateDoc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot,
+  serverTimestamp 
+} from 'firebase/firestore';
 
 interface LinkItem {
   id: string;
@@ -8,14 +24,18 @@ interface LinkItem {
   description: string;
   tags: string[];
   createdAt: Date;
+  userId: string;
   favicon?: string;
 }
 
 function DashboardPage() {
+  const router = useRouter();
+  const [user, loading, error] = useAuthState(auth);
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     url: '',
     title: '',
@@ -23,48 +43,53 @@ function DashboardPage() {
     tags: ''
   });
 
-  // Sample data for demonstration
+  // Redirection si non authentifié
   useEffect(() => {
-    const sampleLinks: LinkItem[] = [
-      {
-        id: '1',
-        url: 'https://react.dev',
-        title: 'React Documentation',
-        description: 'The official React documentation with guides, API reference, and tutorials for building user interfaces.',
-        tags: ['react', 'javascript', 'frontend', 'documentation'],
-        createdAt: new Date('2024-01-15'),
-        favicon: '⚛️'
-      },
-      {
-        id: '2',
-        url: 'https://tailwindcss.com',
-        title: 'Tailwind CSS',
-        description: 'A utility-first CSS framework for rapidly building custom designs without leaving your HTML.',
-        tags: ['css', 'tailwind', 'styling', 'frontend'],
-        createdAt: new Date('2024-01-10'),
-        favicon: '🎨'
-      },
-      {
-        id: '3',
-        url: 'https://nextjs.org',
-        title: 'Next.js Framework',
-        description: 'The React framework for production with features like server-side rendering, static generation, and more.',
-        tags: ['nextjs', 'react', 'framework', 'fullstack'],
-        createdAt: new Date('2024-01-05'),
-        favicon: '▲'
-      },
-      {
-        id: '4',
-        url: 'https://firebase.google.com',
-        title: 'Firebase',
-        description: 'Google Firebase platform for building web and mobile applications with real-time database and authentication.',
-        tags: ['firebase', 'database', 'authentication', 'backend'],
-        createdAt: new Date('2024-01-01'),
-        favicon: '🔥'
-      }
-    ];
-    setLinks(sampleLinks);
-  }, []);
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  // Écouter les liens de l'utilisateur en temps réel
+  useEffect(() => {
+    if (!user) return;
+
+    const linksQuery = query(
+      collection(db, 'links'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(linksQuery, (snapshot) => {
+      const userLinks: LinkItem[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        userLinks.push({
+          id: doc.id,
+          url: data.url,
+          title: data.title,
+          description: data.description,
+          tags: data.tags || [],
+          createdAt: data.createdAt?.toDate() || new Date(),
+          userId: data.userId,
+          favicon: data.favicon || '🔗'
+        });
+      });
+      setLinks(userLinks);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Fonction de déconnexion
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error('Erreur de déconnexion:', error);
+    }
+  };
 
   const filteredLinks = links.filter(link =>
     link.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -73,40 +98,42 @@ function DashboardPage() {
     link.url.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSubmit = () => {
-    if (!formData.url || !formData.title) return;
+  const handleSubmit = async () => {
+    if (!formData.url || !formData.title || !user) return;
     
-    if (editingLink) {
-      // Update existing link
-      setLinks(prevLinks => 
-        prevLinks.map(link => 
-          link.id === editingLink.id 
-            ? {
-                ...link,
-                url: formData.url,
-                title: formData.title,
-                description: formData.description,
-                tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-              }
-            : link
-        )
-      );
-      setEditingLink(null);
-    } else {
-      // Add new link
-      const newLink: LinkItem = {
-        id: Date.now().toString(),
-        url: formData.url,
-        title: formData.title,
-        description: formData.description,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        createdAt: new Date(),
-        favicon: '🔗'
-      };
-      setLinks(prevLinks => [newLink, ...prevLinks]);
+    setIsSubmitting(true);
+
+    try {
+      if (editingLink) {
+        // Mettre à jour le lien existant
+        const linkRef = doc(db, 'links', editingLink.id);
+        await updateDoc(linkRef, {
+          url: formData.url,
+          title: formData.title,
+          description: formData.description,
+          tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+          updatedAt: serverTimestamp()
+        });
+        setEditingLink(null);
+      } else {
+        // Ajouter un nouveau lien
+        await addDoc(collection(db, 'links'), {
+          url: formData.url,
+          title: formData.title,
+          description: formData.description,
+          tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+          createdAt: serverTimestamp(),
+          userId: user.uid,
+          favicon: '🔗'
+        });
+      }
+      
+      resetForm();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    resetForm();
   };
 
   const resetForm = () => {
@@ -126,17 +153,38 @@ function DashboardPage() {
     setShowAddModal(true);
   };
 
-  const handleDelete = (id: string) => {
-    setLinks(prevLinks => prevLinks.filter(link => link.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'links', id));
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+    }
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('fr-FR', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     }).format(date);
   };
+
+  // Affichage de chargement
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-400 mx-auto mb-4"></div>
+          <p className="text-gray-300 text-lg">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si pas d'utilisateur, ne rien afficher (redirection en cours)
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -158,14 +206,39 @@ function DashboardPage() {
               </h1>
               <p className="text-gray-300 mt-2 text-lg">Save, organize, and search your important links</p>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="group relative inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105"
-            >
-              <Plus className="h-5 w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-              Add Link
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-blue-400 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-            </button>
+
+            {/* User Info & Actions */}
+            <div className="flex items-center space-x-4">
+              {/* User Info */}
+              <div className="flex items-center space-x-3 bg-slate-700/50 backdrop-blur-sm rounded-xl px-4 py-2 border border-purple-500/20">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                  <User className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-sm">
+                  <p className="text-white font-medium">{user.displayName || 'Utilisateur'}</p>
+                  <p className="text-gray-400 text-xs">{user.email}</p>
+                </div>
+              </div>
+
+              {/* Add Link Button */}
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="group relative inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105"
+              >
+                <Plus className="h-5 w-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+                Add Link
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-blue-400 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="p-3 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-300 hover:scale-110"
+                title="Se déconnecter"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -183,6 +256,47 @@ function DashboardPage() {
           />
           <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
             <div className="w-2 h-2 bg-purple-400 rounded-full animate-ping"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 backdrop-blur-sm rounded-xl p-4 border border-purple-500/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Links</p>
+                <p className="text-2xl font-bold text-white">{links.length}</p>
+              </div>
+              <LinkIcon className="h-8 w-8 text-purple-400" />
+            </div>
+          </div>
+          <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 backdrop-blur-sm rounded-xl p-4 border border-blue-500/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Tags Used</p>
+                <p className="text-2xl font-bold text-white">
+                  {[...new Set(links.flatMap(link => link.tags))].length}
+                </p>
+              </div>
+              <Tag className="h-8 w-8 text-blue-400" />
+            </div>
+          </div>
+          <div className="bg-gradient-to-r from-cyan-600/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-4 border border-cyan-500/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">This Month</p>
+                <p className="text-2xl font-bold text-white">
+                  {links.filter(link => {
+                    const now = new Date();
+                    const linkDate = new Date(link.createdAt);
+                    return linkDate.getMonth() === now.getMonth() && linkDate.getFullYear() === now.getFullYear();
+                  }).length}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-cyan-400" />
+            </div>
           </div>
         </div>
       </div>
@@ -367,15 +481,27 @@ function DashboardPage() {
                   type="button"
                   onClick={resetForm}
                   className="px-6 py-3 text-gray-300 bg-slate-600/80 backdrop-blur-sm rounded-xl hover:bg-slate-600 transition-all duration-300 hover:scale-105"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg shadow-purple-500/25 hover:scale-105"
+                  disabled={isSubmitting || !formData.url || !formData.title}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg shadow-purple-500/25 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  {editingLink ? 'Update Link' : 'Save Link'}
+                  {isSubmitting ? (
+                    <div className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </div>
+                  ) : (
+                    editingLink ? 'Update Link' : 'Save Link'
+                  )}
                 </button>
               </div>
             </div>
